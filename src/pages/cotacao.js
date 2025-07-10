@@ -8,7 +8,7 @@ export default function Home() {
     { refreshInterval: 5000 } // Atualiza a cada 60s //1000 == 1 segundo refresh page
   );
 
-  if (error) return <div>Erro ao carregar dados.</div>; 
+  if (error) return <div>Erro ao carregar dados.</div>;
   if (isLoading || !data) return <div>Carregando...</div>;
 
   const usdbrl = data.USDBRL;

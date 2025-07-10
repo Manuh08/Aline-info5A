@@ -1,97 +1,86 @@
-import React, { useState } from 'react';
-import {
-  TextField,
-  Button,
-  Box,
-  createTheme,
-  ThemeProvider,
-} from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { format } from 'date-fns';
 
-const themeClaro = createTheme({
-  palette: {
-    mode: 'light', // força tema claro
-  },
-});
-
-export default function CotacaoForm() {
-  const [dataInicio, setDataInicio] = useState(null);
-  const [dataFim, setDataFim] = useState(null);
-  const [cotacoes, setCotacoes] = useState([]);
-
-  const formatarData = (data) => {
-    if (!data) return '';
-    const ano = data.getFullYear();
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const dia = String(data.getDate()).padStart(2, '0');
-    return `${ano}${mes}${dia}`;
-  };
+export default function CotacaoData() {
+  const [inicio, setInicio] = useState(null);
+  const [fim, setFim] = useState(null);
+  const [dados, setDados] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const buscarCotacao = async () => {
-    if (!dataInicio || !dataFim) {
-      alert('Selecione as duas datas!');
-      return;
-    }
+    if (!inicio || !fim) return alert('Selecione as duas datas!');
 
-    const inicio = formatarData(dataInicio);
-    const fim = formatarData(dataFim);
+    const dataInicio = format(inicio, 'yyyyMMdd');
+    const dataFim = format(fim, 'yyyyMMdd');
 
-    const url = `https://economia.awesomeapi.com.br/json/daily/USD-BRL/365?start_date=${inicio}&end_date=${fim}`;
-
+    setLoading(true);
     try {
-      const resposta = await fetch(url);
-      const dados = await resposta.json();
-      setCotacoes(dados);
+      const resposta = await fetch(
+        `https://economia.awesomeapi.com.br/json/daily/USD-BRL/365?start_date=${dataInicio}&end_date=${dataFim}`
+      );
+      const json = await resposta.json();
+      setDados(json);
     } catch (erro) {
-      console.error('Erro ao buscar cotações:', erro);
-      alert('Erro ao buscar dados. Veja o console.');
+      alert('Erro ao buscar dados');
+      console.error(erro);
     }
+    setLoading(false);
   };
 
   return (
-    <ThemeProvider theme={themeClaro}>
-      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-        <Box sx={{ p: 3, fontFamily: 'Arial' }}>
-          <h2>Buscar Cotação USD/BRL</h2>
+    <main style={{ padding: '2rem', fontFamily: 'Arial' }}>
+      <h2>Buscar Cotação USD/BRL</h2>
 
-          <DatePicker
-            label="Data Início"
-            value={dataInicio}
-            onChange={(newValue) => setDataInicio(newValue)}
-            renderInput={(params) => <TextField {...params} sx={{ m: 1 }} />}
-          />
+      <div style={{ marginBottom: '1rem' }}>
+        <label>Data Início:</label><br />
+        <DatePicker
+          selected={inicio}
+          onChange={(date) => setInicio(date)}
+          dateFormat="dd/MM/yyyy"
+          placeholderText="Selecione a data"
+        />
+      </div>
 
-          <DatePicker
-            label="Data Fim"
-            value={dataFim}
-            onChange={(newValue) => setDataFim(newValue)}
-            renderInput={(params) => <TextField {...params} sx={{ m: 1 }} />}
-          />
+      <div style={{ marginBottom: '1rem' }}>
+        <label>Data Fim:</label><br />
+        <DatePicker
+          selected={fim}
+          onChange={(date) => setFim(date)}
+          dateFormat="dd/MM/yyyy"
+          placeholderText="Selecione a data"
+        />
+      </div>
 
-          <Button variant="contained" onClick={buscarCotacao} sx={{ m: 1 }}>
-            Buscar
-          </Button>
+      <button onClick={buscarCotacao}>Buscar</button>
 
-          {cotacoes.length > 0 && (
-            <Box mt={2}>
-              <h3>Resultados:</h3>
-              {cotacoes.map((item, index) => (
-                <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #ccc', borderRadius: 1 }}>
-                  <div><strong>Data:</strong> {new Date(item.timestamp * 1000).toLocaleDateString()}</div>
-                  <div><strong>Compra:</strong> R$ {item.bid}</div>
-                  <div><strong>Venda:</strong> R$ {item.ask}</div>
-                  <div><strong>Alta:</strong> R$ {item.high}</div>
-                  <div><strong>Baixa:</strong> R$ {item.low}</div>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
-      </LocalizationProvider>
-    </ThemeProvider>
+      {loading && <p>Carregando...</p>}
+
+      {dados.length > 0 && (
+        <table border="1" cellPadding={5} style={{ marginTop: '1rem' }}>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Compra</th>
+              <th>Venda</th>
+              <th>Alta</th>
+              <th>Baixa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dados.map((item) => (
+              <tr key={item.timestamp}>
+                <td>{new Date(item.timestamp * 1000).toLocaleDateString()}</td>
+                <td>R$ {parseFloat(item.bid).toFixed(2)}</td>
+                <td>R$ {parseFloat(item.ask).toFixed(2)}</td>
+                <td>R$ {parseFloat(item.high).toFixed(2)}</td>
+                <td>R$ {parseFloat(item.low).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </main>
   );
 }
-
